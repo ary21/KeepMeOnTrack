@@ -34,7 +34,7 @@ function playCompletionSound() {
 }
 
 export default function Today({ onOpenSetup }) {
-  const { habits, toggleDay } = useHabitStore();
+  const { habits, toggleDay, toggleActionItem } = useHabitStore();
   const { settings } = useSettingsStore();
 
   const activeHabit = habits.find((h) => h.id === settings.activeHabitId) || habits[0];
@@ -63,12 +63,26 @@ export default function Today({ onOpenSetup }) {
   const isCompleted = activeHabit.completedDays.includes(today);
   const currentStreak = calculateCurrentStreak(activeHabit.completedDays, today);
   const accent = activeHabit.accentColor || '#22c55e';
+  const actionItems = activeHabit.actionItems || [];
+  const completedActions = activeHabit.dailyCompletions?.[today] || [];
 
   const handleTap = () => {
     toggleDay(activeHabit.id, today);
-    
     const nextCompleted = !isCompleted;
-    if (nextCompleted) {
+    triggerCelebration(nextCompleted);
+  };
+
+  const handleActionTap = (itemId) => {
+    const isChecking = !completedActions.includes(itemId);
+    toggleActionItem(activeHabit.id, today, itemId);
+
+    if (isChecking && completedActions.length + 1 === actionItems.length) {
+      triggerCelebration(true);
+    }
+  };
+
+  const triggerCelebration = (shouldCelebrate) => {
+    if (shouldCelebrate) {
       if (settings.soundEnabled) {
         playCompletionSound();
       }
@@ -103,45 +117,92 @@ export default function Today({ onOpenSetup }) {
         </h1>
       </div>
 
-      {/* Large Interactive Tap Button */}
-      <div className="relative flex items-center justify-center w-64 h-64">
-        {/* Outer pulse circles */}
-        <div 
-          className="absolute inset-0 rounded-full opacity-10 animate-ping duration-1000"
-          style={{ backgroundColor: accent }}
-        />
-        <div 
-          className="absolute inset-4 rounded-full opacity-20 animate-pulse duration-700"
-          style={{ backgroundColor: accent }}
-        />
+      {actionItems.length > 0 ? (
+        /* Action Items Checklist */
+        <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800/80">
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Aktivitas Hari Ini</span>
+            <span className="text-xs font-bold text-slate-450 dark:text-slate-550">
+              {completedActions.length} / {actionItems.length} Selesai
+            </span>
+          </div>
 
-        {/* Core button */}
-        <button
-          onClick={handleTap}
-          style={{
-            background: isCompleted 
-              ? `linear-gradient(135deg, ${accent}, ${accent}dd)` 
-              : 'linear-gradient(135deg, #1e293b, #0f172a)'
-          }}
-          className={`relative z-10 w-48 h-48 rounded-full shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-90 hover:scale-105 border-4 duration-300 ${
-            isCompleted 
-              ? 'border-white dark:border-slate-800' 
-              : 'border-slate-700 dark:border-slate-800'
-          }`}
-        >
-          {isCompleted ? (
-            <>
-              <CheckCircle2 size={54} className="mb-2 text-white animate-bounce" />
-              <span className="text-sm font-bold uppercase tracking-wider">Selesai!</span>
-            </>
-          ) : (
-            <>
-              <Circle size={44} className="mb-3 text-slate-400 group-hover:text-white" />
-              <span className="text-sm font-bold uppercase tracking-wider text-slate-300">Tap Hari Ini</span>
-            </>
-          )}
-        </button>
-      </div>
+          <div className="space-y-3">
+            {actionItems.map((item) => {
+              const isItemDone = completedActions.includes(item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleActionTap(item.id)}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border text-left transition-all ${
+                    isItemDone 
+                      ? 'bg-slate-50 dark:bg-slate-950/40 border-slate-100 dark:border-slate-850 opacity-80' 
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <span className={`text-sm font-semibold transition-all ${
+                    isItemDone 
+                      ? 'text-slate-405 dark:text-slate-505 line-through' 
+                      : 'text-slate-700 dark:text-slate-200'
+                  }`}>
+                    {item.text}
+                  </span>
+                  <div 
+                    className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                      isItemDone 
+                        ? 'border-transparent text-white' 
+                        : 'border-slate-300 dark:border-slate-700'
+                    }`}
+                    style={isItemDone ? { backgroundColor: accent } : {}}
+                  >
+                    {isItemDone && <span className="text-xs">✓</span>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Large Interactive Tap Button */
+        <div className="relative flex items-center justify-center w-64 h-64">
+          {/* Outer pulse circles */}
+          <div 
+            className="absolute inset-0 rounded-full opacity-10 animate-ping duration-1000"
+            style={{ backgroundColor: accent }}
+          />
+          <div 
+            className="absolute inset-4 rounded-full opacity-20 animate-pulse duration-700"
+            style={{ backgroundColor: accent }}
+          />
+
+          {/* Core button */}
+          <button
+            onClick={handleTap}
+            style={{
+              background: isCompleted 
+                ? `linear-gradient(135deg, ${accent}, ${accent}dd)` 
+                : 'linear-gradient(135deg, #1e293b, #0f172a)'
+            }}
+            className={`relative z-10 w-48 h-48 rounded-full shadow-2xl flex flex-col items-center justify-center text-white transition-all active:scale-90 hover:scale-105 border-4 duration-300 ${
+              isCompleted 
+                ? 'border-white dark:border-slate-800' 
+                : 'border-slate-700 dark:border-slate-800'
+            }`}
+          >
+            {isCompleted ? (
+              <>
+                <CheckCircle2 size={54} className="mb-2 text-white animate-bounce" />
+                <span className="text-sm font-bold uppercase tracking-wider">Selesai!</span>
+              </>
+            ) : (
+              <>
+                <Circle size={44} className="mb-3 text-slate-400 group-hover:text-white" />
+                <span className="text-sm font-bold uppercase tracking-wider text-slate-300">Tap Hari Ini</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Target Progress Quick Indicator */}
       <div className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm space-y-3">
@@ -163,7 +224,9 @@ export default function Today({ onOpenSetup }) {
         <div className="text-center text-xs text-slate-400 dark:text-slate-500 pt-1 font-semibold">
           {isCompleted 
             ? 'Kerja bagus! Sampai jumpa besok hari.' 
-            : 'Ketuk tombol di atas setelah Anda menyelesaikan aktivitas hari ini.'
+            : actionItems.length > 0 
+              ? 'Selesaikan semua aktivitas hari ini untuk menyambung rantai.' 
+              : 'Ketuk tombol di atas setelah Anda menyelesaikan aktivitas hari ini.'
           }
         </div>
       </div>

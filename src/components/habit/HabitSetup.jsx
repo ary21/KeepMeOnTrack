@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import { useHabitStore } from '../../store/habitStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getTodayISO } from '../../utils/dateUtils';
@@ -29,6 +28,8 @@ export default function HabitSetup({ onClose, editHabitId = null }) {
   const [startDate, setStartDate] = useState(existingHabit?.startDate || getTodayISO());
   const [emoji, setEmoji] = useState(existingHabit?.emoji || '🎯');
   const [accentColor, setAccentColor] = useState(existingHabit?.accentColor || PRESET_COLORS[0]);
+  const [actionItems, setActionItems] = useState(existingHabit?.actionItems || []);
+  const [newActionText, setNewActionText] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -43,6 +44,7 @@ export default function HabitSetup({ onClose, editHabitId = null }) {
         startDate,
         emoji,
         accentColor,
+        actionItems,
       });
     } else {
       const newId = uuidv4();
@@ -55,7 +57,9 @@ export default function HabitSetup({ onClose, editHabitId = null }) {
         startDate,
         createdAt: new Date().toISOString(),
         completedDays: [],
+        dailyCompletions: {},
         isArchived: false,
+        actionItems,
       });
       updateSettings({ activeHabitId: newId });
     }
@@ -191,6 +195,58 @@ export default function HabitSetup({ onClose, editHabitId = null }) {
                 <span className="text-sm text-slate-500">Hari (min 7, max 365)</span>
               </div>
             )}
+          </div>
+
+          {/* Action Items List */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
+              Action Items (Opsional)
+            </label>
+            <div className="space-y-2 mb-3">
+              {actionItems.map((item, idx) => (
+                <div key={item.id} className="flex items-center justify-between bg-slate-55 dark:bg-slate-950 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850">
+                  <span className="text-sm text-slate-700 dark:text-slate-300 truncate pr-2">
+                    {idx + 1}. {item.text}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActionItems(actionItems.filter(ai => ai.id !== item.id))}
+                    className="p-1 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Tambah sub-target/aktivitas..."
+                value={newActionText}
+                onChange={(e) => setNewActionText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!newActionText.trim()) return;
+                    setActionItems([...actionItems, { id: uuidv4(), text: newActionText.trim() }]);
+                    setNewActionText('');
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!newActionText.trim()) return;
+                  setActionItems([...actionItems, { id: uuidv4(), text: newActionText.trim() }]);
+                  setNewActionText('');
+                }}
+                className="p-2 bg-indigo-50 hover:bg-indigo-105 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl transition-all"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Start Date */}
